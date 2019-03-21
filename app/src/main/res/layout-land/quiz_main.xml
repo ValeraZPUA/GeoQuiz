@@ -2,6 +2,7 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:tools="http://schemas.android.com/tools"
     android:orientation="horizontal">
 
     <TextView
@@ -30,6 +31,14 @@
             android:text="@string/falseBtn" />
 
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvCheatsLeft"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        tools:text="left"
+        android:layout_gravity="bottom|center_horizontal"
+        android:paddingBottom="50dp"/>
 
     <Button
         android:id="@+id/btnCheat"

@@ -2,6 +2,7 @@ package edu.example.geoquiz;
 
 import android.app.Activity;
 import android.content.Intent;
+import android.icu.text.UnicodeSetSpanner;
 import android.support.annotation.Nullable;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -17,24 +18,27 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
 
     private Button btnTrue, btnFalse, btnCheat;
     private ImageButton btnNext, btnPrev;
-    private TextView tvQuestion;
+    private TextView tvQuestion, tvCheatsLeft;
     private Question[] questionBank;
-    private int currentIndex;
+    private int currentIndex, cheatsQuantityLeft;
 
-    private static final String TAG = "QuizActivity";
+    public static final String TAG = "QuizActivity";
     private static final String KEY_INDEX = "index";
     private static final String CLICKED_BTN = "clicked";
     private static final String CHEATER = "cheater";
+    private static final String TRY = "try";
     private static final int REQUEST_CODE_CHEAT = 0;
+    private static final int REQUEST_CODE_LEFT = 1;
     private boolean isCheated;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        Log.d(TAG, "onCreate(Bundle) called");
+        showLog("onCreate");
         setContentView(R.layout.quiz_main);
 
         currentIndex = 0;
+        cheatsQuantityLeft = 3;
 
         btnTrue = findViewById(R.id.btnTrue);
         btnFalse = findViewById(R.id.btnFalse);
@@ -42,18 +46,23 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
         btnNext = findViewById(R.id.btnNext);
         btnPrev = findViewById(R.id.btnPrev);
         tvQuestion = findViewById(R.id.tvQuestion);
+        tvCheatsLeft = findViewById(R.id.tvCheatsLeft);
 
         if (savedInstanceState != null) {
             currentIndex = savedInstanceState.getInt(KEY_INDEX,0);
             if (savedInstanceState.containsKey(CLICKED_BTN)) {
-                Log.d(TAG, "HERE");
                 btnFalse.setEnabled(savedInstanceState.getBoolean(CLICKED_BTN));
                 btnTrue.setEnabled(savedInstanceState.getBoolean(CLICKED_BTN));
+            }
+            if (savedInstanceState.containsKey(TRY)) {
+                cheatsQuantityLeft = savedInstanceState.getInt(TRY);
             }
             if (savedInstanceState.containsKey(CHEATER)) {
                 isCheated = true;
             }
         }
+
+        setTvCheatsLeft(cheatsQuantityLeft);
 
         btnFalse.setOnClickListener(this);
         btnTrue.setOnClickListener(this);
@@ -66,28 +75,36 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
         updateQuestion();
     }
 
+    private void setTvCheatsLeft(int cheatsQuantityLeft) {
+        tvCheatsLeft.setText(getResources().getString(R.string.left) + cheatsQuantityLeft);
+    }
+
     @Override
     protected void onStart() {
         super.onStart();
-        Log.d(TAG, "onStart(Bundle) called");
+        showLog("onStart");
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        Log.d(TAG, "onResume(Bundle) called");
+        showLog("onResume");
+        if (cheatsQuantityLeft == 0) {
+            btnCheat.setEnabled(false);
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        Log.d(TAG, "onPause(Bundle) called");
+        showLog("onPause");
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         outState.putInt(KEY_INDEX, currentIndex);
+        outState.putInt(TRY, cheatsQuantityLeft);
         if (!btnTrue.isEnabled()) {
             outState.putBoolean(CLICKED_BTN, false);
         }
@@ -99,13 +116,13 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
     @Override
     protected void onStop() {
         super.onStop();
-        Log.d(TAG, "onStop(Bundle) called");
+        showLog("onStop");
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        Log.d(TAG, "onDestroy(Bundle) called");
+        showLog("onDestroy");
     }
 
     private void makeQuestionsArray() {
@@ -130,11 +147,15 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
                 checkAnswer(false);
                 break;
             case R.id.btnCheat:
-                //Intent intent = new Intent(QuizActivity.this, CheatActivity.class);
-                Intent intent = CheatActivity
-                        .newIntent(QuizActivity.this, questionBank[currentIndex].isAnswerTrue());
-                //startActivity(intent);
+                Intent intent = CheatActivity.newIntent(QuizActivity.this, questionBank[currentIndex].isAnswerTrue(), cheatsQuantityLeft);
                 startActivityForResult(intent,REQUEST_CODE_CHEAT);
+                /*if (cheatsQuantityLeft>0) {
+                    cheatsQuantityLeft--;
+                    setTvCheatsLeft(cheatsQuantityLeft);
+                    if (cheatsQuantityLeft==0) {
+                        btnCheat.setEnabled(false);
+                    }
+                }*/
                 break;
             case R.id.btnNext:
                 nextQuestion(currentIndex);
@@ -176,9 +197,11 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
             rightAnswers += questionBank[i].getAnswer();
         }
         int percent = (rightAnswers * 100) / questionBank.length;
-        Toast.makeText(this, getResources().getString(R.string.result) + " " +
+        Toast.makeText(this, getResources().getString(R.string.result) +
                                           String.valueOf(percent) +
                                           getResources().getString(R.string.percent_symbol), Toast.LENGTH_SHORT).show();
+        cheatsQuantityLeft = 3;
+        setTvCheatsLeft(cheatsQuantityLeft);
     }
 
     private void updateQuestion(){
@@ -211,6 +234,14 @@ public class QuizActivity extends AppCompatActivity implements View.OnClickListe
                 return;
             }
             isCheated = CheatActivity.wasAnswerShown(data);
+            cheatsQuantityLeft = CheatActivity.countCheats(data);
+            setTvCheatsLeft(cheatsQuantityLeft);
+            showLog("onActivityResult");
         }
     }
+
+    public void showLog(String str) {
+        Log.d("tag", "HERE " + str);
+    }
+
 }
